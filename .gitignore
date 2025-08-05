@@ -1,0 +1,4 @@
+# .gitignore
+core/local_config.py
+.idea/
+__pycache__/

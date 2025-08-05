@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>UnderLamp-friends-panel</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            background: url("/static/background.png") no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+        }
+
+        .container {
+            position: relative;
+            backdrop-filter: blur(10px);
+            background-color: rgba(0, 0, 0, 0.4);
+            margin: 50px auto;
+            max-width: 600px;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .github-inside {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+        }
+
+        .github-inside a {
+            display: inline-flex;
+            align-items: center;
+            color: white;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .github-inside a:hover {
+            color: #ccc;
+        }
+
+        .github-inside svg {
+            fill: white;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        dialog {
+            border: none;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        input {
+            margin: 8px;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .form-btns {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="github-inside">
+        <a href="https://github.com/starfi11/friends-panel" target="_blank" title="GitHub 源码仓库">
+            <svg height="20" viewBox="0 0 16 16" width="20" aria-hidden="true">
+                <path fill-rule="evenodd"
+                      d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47
+                      7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49
+                      -2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                      -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82
+                      .72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07
+                      -1.78-.2-3.64-.89-3.64-3.95
+                      0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11
+                      0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2
+                      .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08
+                      2.11.51.56.82 1.27.82 2.15
+                      0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54
+                      1.48 0 1.07-.01 1.93-.01 2.2
+                      0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                </path>
+            </svg>
+            <span style="margin-left: 4px;">GitHub</span>
+        </a>
+    </div>
+
+    <h1>宝可梦服务器控制面板</h1>
+    <div>
+        <button onclick="openDialog('start')">启动服务器</button>
+        <button onclick="openDialog('extend')">延长时间</button>
+        <button onclick="openDialog('shutdown')">关闭服务器</button>
+        <button onclick="openDialog('status')">查询状态</button>
+        <button onclick="openDialog('add')">添加白名单</button>
+    </div>
+</div>
+
+<dialog id="formDialog">
+    <form id="form" method="dialog">
+        <h3 id="formTitle">操作</h3>
+        <input type="email" name="email" placeholder="你的邮箱" required><br>
+        <input type="text" name="code" placeholder="验证码" required>
+        <button type="button" onclick="sendCode()">获取验证码</button><br>
+        <div id="extraFields"></div>
+        <div class="form-btns">
+            <button type="submit">提交</button>
+            <button type="button" onclick="closeDialog()">取消</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+    const dialog = document.getElementById("formDialog");
+    const form = document.getElementById("form");
+    const extraFields = document.getElementById("extraFields");
+
+    let currentAction = "";
+
+    function openDialog(action) {
+        currentAction = action;
+        extraFields.innerHTML = "";
+        form.reset();
+        dialog.querySelector("#formTitle").innerText = {
+            "start": "启动服务器",
+            "extend": "延长时间",
+            "shutdown": "关闭服务器",
+            "status": "查询状态",
+            "add": "添加白名单"
+        }[action];
+
+        if (action === "start") {
+            extraFields.innerHTML = `<input type="number" name="duration" placeholder="持续时间（分钟）30/60/90/120" required>`;
+        } else if (action === "extend") {
+            extraFields.innerHTML = `<input type="number" name="extra_minutes" placeholder="延长分钟数（30/60）" required>`;
+        } else if (action === "add") {
+            extraFields.innerHTML = `
+                <input type="email" name="target_email" placeholder="目标邮箱" required><br>
+                <input type="text" name="target_name" placeholder="目标昵称" required>
+            `;
+        }
+
+        dialog.showModal();
+    }
+
+    function closeDialog() {
+        dialog.close();
+    }
+
+    async function sendCode() {
+        const email = form.email.value;
+        if (!email) return alert("请先填写邮箱");
+
+        const res = await fetch("/api/send-code", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ email })
+        });
+        const data = await res.json();
+        alert(data.message || "验证码发送成功");
+    }
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const body = new URLSearchParams(formData);
+
+        let url = {
+            "start": "/api/start",
+            "extend": "/api/extend",
+            "shutdown": "/api/shutdown",
+            "status": "/api/status",
+            "add": "/api/add-allowed-email"
+        }[currentAction];
+
+        const method = currentAction === "status" ? "GET" : "POST";
+
+        const res = await fetch(url + (method === "GET" ? "?" + body.toString() : ""), {
+            method,
+            headers: method === "POST" ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
+            body: method === "POST" ? body : null
+        });
+
+        const data = await res.json();
+        alert(data.message || JSON.stringify(data));
+        closeDialog();
+    });
+</script>
+</body>
+</html>
