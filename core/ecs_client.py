@@ -7,7 +7,7 @@ from json import dumps
 # tea SDK
 from alibabacloud_tea_openapi.models import Config as AliyunOpenAPIConfig
 from alibabacloud_ecs20140526.client import Client as ECSClient
-from alibabacloud_ecs20140526.models import StartInstanceRequest, StopInstanceRequest, DescribeInstanceStatusRequest
+from alibabacloud_ecs20140526.models import StartInstanceRequest, StopInstanceRequest, DescribeInstanceStatusRequest, DescribeInstancesRequest, DescribeInstanceAttributeRequest
 from Tea.exceptions import TeaException
 
 
@@ -84,3 +84,45 @@ def get_ecs_instance_status(client: ECSClient, region_id: str, instance_id: str)
     except TeaException as e:
         print(f"[ECS] 查询失败: {e.message}")
         raise
+
+
+def get_ecs_public_ip(client: ECSClient, region_id: str, instance_id: str) -> str | None:
+    """
+    更稳的取 IP 方法：调用 DescribeInstanceAttribute
+    优先返回 EIP，其次返回普通公网 IP；拿不到则返回 None
+    """
+    req = DescribeInstanceAttributeRequest(instance_id=instance_id)
+    # 绑定在指定 region 的 client 上，请确保 client 的 region 与实例一致
+
+    try:
+        resp = client.describe_instance_attribute(req)
+        body = resp.body
+
+        # 1) EIP（弹性公网 IP）
+        try:
+            eip = getattr(body.eip_address, "ip_address", None)
+            if eip:
+                return eip
+        except Exception:
+            pass
+
+        # 2) 普通公网 IP（PublicIpAddress.IpAddress 为 list）
+        try:
+            pub_list = getattr(body.public_ip_address, "ip_address", None)
+            if isinstance(pub_list, list) and pub_list:
+                return pub_list[0]
+        except Exception:
+            pass
+
+        # 有些场景会直接给一个字符串形式（极少见，但兜底一下）
+        try:
+            direct_pub = getattr(body, "public_ip_address", None)
+            if isinstance(direct_pub, str) and direct_pub:
+                return direct_pub
+        except Exception:
+            pass
+
+        return None
+    except TeaException as e:
+        print(f"[ECS] 获取公网 IP 失败: {e.message}")
+        return None

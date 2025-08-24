@@ -2,7 +2,7 @@ import asyncio
 import time
 from datetime import datetime, timedelta
 from core import ecs_client, server_state, wecom, wecom_templates
-from core.ecs_client import create_ecs_client, get_ecs_instance_status, start_ecs_instance, stop_ecs_instance
+from core.ecs_client import create_ecs_client, get_ecs_instance_status, start_ecs_instance, stop_ecs_instance, get_ecs_public_ip
 from core.config import (
     ECS_INSTANCE_ID, ALIYUN_REGION_ID, ALIYUN_ACCESS_KEY_ID, ALIYUN_ACCESS_KEY_SECRET,
     MCS_API_KEY, MCS_BASE_URL, POKEMON_DAEMON_ID, POKEMON_INSTANCE_UUID, EMAIL_TO_NAME
@@ -41,6 +41,9 @@ def start_server(user_email: str, duration: timedelta = None) -> str:
             else:
                 raise TimeoutError("ECS 启动超时")
 
+        public_ip = get_ecs_public_ip(ecs, ALIYUN_REGION_ID, ECS_INSTANCE_ID)
+        ip_text = public_ip if public_ip else "未分配 / 内网不可达"
+
         # 即便 ECS 已运行，仍继续启动 MCS
         now = datetime.now()
         expire = now + duration if duration else None
@@ -66,6 +69,7 @@ def start_server(user_email: str, duration: timedelta = None) -> str:
             f"**[宝可梦服务器已启动]**\n"
             f"> 启动时间：{start_fmt}\n"
             f"> 持续时间：<font color=\"warning\">{start_fmt} ~ {expire_fmt}</font>"
+            f"> 公网 IP：<font color=\"info\">{ip_text}</font>"
         )
 
         wecom.send_wecom_markdown(mc_msg)
