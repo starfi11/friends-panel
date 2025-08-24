@@ -9,6 +9,7 @@ from alibabacloud_tea_openapi.models import Config as AliyunOpenAPIConfig
 from alibabacloud_ecs20140526.client import Client as ECSClient
 from alibabacloud_ecs20140526.models import StartInstanceRequest, StopInstanceRequest, DescribeInstanceStatusRequest, DescribeInstancesRequest, DescribeInstanceAttributeRequest
 from Tea.exceptions import TeaException
+from typing import Optional
 
 
 # 创建并返回一个 aliyunECS 的客户端对象，用于之后发起API请求
@@ -86,7 +87,7 @@ def get_ecs_instance_status(client: ECSClient, region_id: str, instance_id: str)
         raise
 
 
-def get_ecs_public_ip(client: ECSClient, region_id: str, instance_id: str) -> str | None:
+def get_ecs_public_ip(client: ECSClient, region_id: str, instance_id: str) -> Optional[str]:
     """
     更稳的取 IP 方法：调用 DescribeInstanceAttribute
     优先返回 EIP，其次返回普通公网 IP；拿不到则返回 None
